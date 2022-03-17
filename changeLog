@@ -1,0 +1,6 @@
+
+28/8/21     Renamed varibles and funtions in line with pep-8 conventions.
+            rewrote plotting and saving functions
+            
+20/8/21     Updated routine to plot and save weekly acoustic power
+
