@@ -1,3 +1,3 @@
-# magicFeather
+# Magic Feather
 
-The is the DDS source code based on the Raspberry Pi Infrasonic wave detector.  
+This is a raspberry pi based sensor package that is designed to detect the presence of infrasonic waves.  
