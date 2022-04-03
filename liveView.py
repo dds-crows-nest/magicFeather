@@ -24,7 +24,7 @@ class LiveView:
 
         # Ring Buffer setup
         self.buffer = collections.deque(np.full(int(bufferSize), 0.0))
-        print(str(self.buffer))
+        #print(str(self.buffer))
 
         # GPIO Setup
         GPIO.setmode(GPIO.BOARD)
@@ -134,7 +134,7 @@ class LiveView:
 
         while True:
             
-            plt.close()
+            #plt.close()
 
             x = np.array([i for i in range(len(self.buffer))])
             y = np.array(self.buffer)
@@ -148,7 +148,7 @@ class LiveView:
             plt.draw()
             plt.pause(1)
             time.sleep(1)
-            plt.figure().clear()
+            plt.clf()
 
 
     def startViewer(self):
@@ -166,7 +166,7 @@ class LiveView:
 if __name__ == "__main__":
 
     print("Starting Sensor Viewer")
-    viewer = LiveView(10)
+    viewer = LiveView(10000)
     viewer.startViewer()
 
     print("Press Ctrl + C to exit")
