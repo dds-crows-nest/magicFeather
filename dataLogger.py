@@ -1,30 +1,29 @@
-import sys # needed to exit
-
-import matplotlib.pyplot as plt # needed for graphs
-import numpy as np # needed for graph
-import collections # needed for deque
-import pika # needed for rabbitMQ
-
+import gc
+import os # needed for file stuff
 import time # needed for sleep
 from threading import Thread # needed for threads
+import sys # needed to exit
 
-import warnings # needed for filtering
-warnings.filterwarnings( "ignore") # filter user warning
+import numpy as np # needed for graph
+import collections
+from obspy import UTCDateTime # needed for deque
 
-class LiveView:
-    '''
-    Simple Python class to visualize sensor data
-    '''
+import pika # needed for rabbitMQ
 
-    def __init__(self, bufferSize):
+class DataLogger:
 
+    def __init__(self):
+
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(exchange='alert', exchange_type='fanout')
+
+        self.buffer = collections.deque()
+        self.readTime = UTCDateTime()
+        self.pastRead = 0.0
+        self.status = ""
+        self.average = 0.0
         
-
-        # Ring Buffer setup
-        self.buffer = collections.deque(np.full(int(bufferSize), 0.0))
-        #print(str(self.buffer))
-        
-
     def linkRabbit(self):
         """Setup and start lisenting for RabbitMQ messages
         """
@@ -58,33 +57,27 @@ class LiveView:
 
         data = float(body)
 
-        #update buffer by appending to right and poping left most value
+        #update buffer by appending to right
         self.buffer.append(data)
-        self.buffer.popleft()
 
+        #print(UTCDateTime() - self.readTime)
+        self.readTime = UTCDateTime()
 
-    def display(self):
+        self.average = (abs(data) + self.pastRead) / 2.0
+        self.pastRead = abs(data)
 
-        while True:
-            
-            #plt.close()
+        #print(str(self.average))
 
-            x = np.array([i for i in range(len(self.buffer))])
-            y = np.array(self.buffer)
+        if self.average < 0.2:
+            status = 'normal'
+        elif self.average < 1:
+            status = 'warning'
+        else:
+            status = 'danger'
 
-            #print(str(x))
-            #print(str(y))
+        self.channel.basic_publish(exchange='alert', routing_key='', body=status)
 
-            plt.stem(x, y, use_line_collection = True, bottom= 0.0)
-            
-
-            plt.draw()
-            plt.pause(1)
-            time.sleep(1)
-            plt.clf()
-
-
-    def startViewer(self):
+    def startLogger(self):
         '''
         Simple method to start the different threads
         '''
@@ -92,15 +85,13 @@ class LiveView:
         self.rabbitThread = Thread(target=self.linkRabbit, daemon=True)
         self.rabbitThread.start()
 
-        self.displayThread = Thread(target=self.display, daemon=True)
-        self.displayThread.start()
-
 
 if __name__ == "__main__":
 
-    print("Starting Sensor Viewer")
-    viewer = LiveView(10000)
-    viewer.startViewer()
+    print("Starting Data")
+    dataLogger = DataLogger()
+
+    dataLogger.startLogger()
 
     print("Press Ctrl + C to exit")
 
