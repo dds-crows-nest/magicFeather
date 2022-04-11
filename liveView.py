@@ -18,8 +18,6 @@ class LiveView:
 
     def __init__(self, bufferSize):
 
-        
-
         # Ring Buffer setup
         self.buffer = collections.deque(np.full(int(bufferSize), 0.0))
         #print(str(self.buffer))
