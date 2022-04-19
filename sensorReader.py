@@ -34,15 +34,21 @@ class SensorReader:
         raw_pressure= int
         raw_data=[]
 
-        z = [0,0,0,0]
-        z = self.sensor.read_i2c_block_data(self.addr, 0, 4) #offset 0, 4 bytes
+        try:
 
-        d_masked = (z[0] & 0x3F)
-        raw_data = (d_masked<<8) +  z[1]    
+            z = [0,0,0,0]
+            z = self.sensor.read_i2c_block_data(self.addr, 0, 4) #offset 0, 4 bytes
 
-        raw_pressure= int(raw_data)
-        pressure = (((raw_pressure-8192.0)/16384.0)*250.0 *1.25)
-        
+            d_masked = (z[0] & 0x3F)
+            raw_data = (d_masked<<8) +  z[1]    
+
+            raw_pressure= int(raw_data)
+            pressure = (((raw_pressure-8192.0)/16384.0)*250.0 *1.25)
+        except:
+            print(f"Something happened at: {str(time.time())}")
+            pressure = 0
+
+
         return pressure
 
 
