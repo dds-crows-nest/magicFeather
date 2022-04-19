@@ -1,8 +1,8 @@
-import gc
 import os # needed for file stuff
 import time # needed for sleep
 from threading import Thread # needed for threads
 import sys # needed to exit
+import csv # needed for working with CSV files
 
 import numpy as np # needed for graph
 import collections
@@ -21,8 +21,18 @@ class DataLogger:
         self.buffer = collections.deque()
         self.readTime = UTCDateTime()
         self.pastRead = 0.0
+        
+        self.writeHour = UTCDateTime().hour
+        self.writeDay = UTCDateTime().day
+        self.writeMonth = UTCDateTime().month
+        self.writeYear = UTCDateTime().year
+
+        self.csvHeader = ["Pressure", "Time"]
+
+        # These two don't need to be calss variables, but it stops the system from having to remake them every read
         self.status = ""
         self.average = 0.0
+
         
     def linkRabbit(self):
         """Setup and start lisenting for RabbitMQ messages
@@ -46,6 +56,37 @@ class DataLogger:
         channel.basic_consume(queue=queue_name, on_message_callback=self.rabbitCallback, auto_ack=True)
         channel.start_consuming()
 
+    def writeBuffer(self):
+        """
+        Writes out the buffer to a CSV file
+        """
+
+        here = os.path.dirname(os.path.realpath(__file__))
+        saveDir = f"data/{str(self.writeYear)}/{str(self.writeMonth)}/{str(self.writeDay)}/"
+        filename = f"{str(self.writeHour)}.csv"
+
+        try:
+            os.makedirs(saveDir)
+        except OSError:
+            if not os.path.isdir(saveDir):
+                raise
+
+        filePath = os.path.join(here, saveDir, filename)
+
+        print(f"Writing data to: {str(filePath)}")
+
+        with open(filePath, 'w', encoding='UTF8', newline='') as dataFile:
+            writer = csv.writer(dataFile)
+            writer.writerow(self.csvHeader)
+            writer.writerows(list(self.buffer))
+
+        # Do this at end
+        self.buffer.clear()
+        self.writeHour = UTCDateTime().hour
+        self.writeDay = UTCDateTime().day
+        self.writeMonth = UTCDateTime().month
+        self.writeYear = UTCDateTime().year
+
     def rabbitCallback(self, ch, method, properties, body):
         """Callback method for rabbitMQ
         Args:
@@ -58,13 +99,13 @@ class DataLogger:
         data = float(body)
 
         #update buffer by appending to right
-        self.buffer.append(data)
+        self.buffer.append([data, UTCDateTime().timestamp])
 
         #print(UTCDateTime() - self.readTime)
         self.readTime = UTCDateTime()
 
-        self.average = (abs(data) + self.pastRead) / 2.0
-        self.pastRead = abs(data)
+        self.average = abs((data + self.pastRead) / 2.0)
+        self.pastRead = data
 
         #print(str(self.average))
 
@@ -77,6 +118,32 @@ class DataLogger:
 
         self.channel.basic_publish(exchange='alert', routing_key='', body=status)
 
+        if UTCDateTime().hour != self.writeHour: # It's a new hour, write buffer    
+            print(f"Buffer Length: {str(len(self.buffer))}")
+            self.writeBuffer()
+
+
+
+    def timeoutCheck(self):
+        """
+        Checks to see if the delta between current time and last read time is greater than timeout value
+        
+        Args:
+            timeout (int): The value in seconds to wait before throwing a timeout alert
+        """
+
+        timeout = 60
+
+        print(f"Timeout check set at {str(timeout)} seconds")
+
+        while True:
+            
+            if (UTCDateTime() - self.readTime) > timeout:
+                self.channel.basic_publish(exchange='alert', routing_key='', body="timeout")
+
+            time.sleep(int(timeout))
+
+
     def startLogger(self):
         '''
         Simple method to start the different threads
@@ -85,11 +152,16 @@ class DataLogger:
         self.rabbitThread = Thread(target=self.linkRabbit, daemon=True)
         self.rabbitThread.start()
 
+        self.timeoutThread = Thread(target=self.timeoutCheck, daemon=True)
+        self.timeoutThread.start()
+
 
 if __name__ == "__main__":
 
     print("Starting Data")
     dataLogger = DataLogger()
+
+    print(f"Started logging at: {str(dataLogger.readTime)}")
 
     dataLogger.startLogger()
 

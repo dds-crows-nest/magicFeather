@@ -1,4 +1,5 @@
 import sys # needed to exit
+import os # needed to run USB commands
 
 import pika # needed for rabbitMQ
 
@@ -10,6 +11,10 @@ import RPi.GPIO as GPIO # needed to use GPIO
 class AlertLED:
 
     def __init__(self):
+
+        self.user = os.getlogin() # need to look for username since it may not be pi
+        self.writingData = False # boolean for alerting when writing to usb
+
         # GPIO Setup
         GPIO.setmode(GPIO.BOARD)
 
@@ -55,18 +60,19 @@ class AlertLED:
 
         status = body.decode('UTF-8')
 
-        if status == "normal":
-            self.ledAlert("BLUE")
-        elif status == "warning":
-            self.ledAlert("YELLOW")
-        elif status == "danger":
-            self.ledAlert("RED")
-        elif status == "timeout":
-            self.ledAlert("PURPLE")
-        elif status == "usb":
-            self.ledAlert("WHITE")
-        else:
-            print(f"Error, unknown status: {str(status)}")
+        if not self.writingData:
+            if status == "normal":
+                self.ledAlert("BLUE")
+            elif status == "warning":
+                self.ledAlert("YELLOW")
+            elif status == "danger":
+                self.ledAlert("RED")
+            elif status == "timeout":
+                self.ledAlert("PURPLE")
+            elif status == "usb":
+                self.ledAlert("WHITE")
+            else:
+                print(f"Error, unknown status: {str(status)}")
         
 
     def ledAlert(self, color):
@@ -116,10 +122,30 @@ class AlertLED:
 
             print(f"Error, unknown color: {str(color)}")
 
+    def usbChecker(self):
+
+        while True:
+
+            for loc in os.listdir(f'/media/{str(self.user)}/'):
+                #print(str(loc))
+                self.writingData = True
+                self.ledAlert('WHITE')
+                print(f"Starting to copy data to: {str(loc)}")
+                os.popen(f"sudo cp -R ./data /media/{str(self.user)}/{loc}")
+                print(f"Finished writing to: {str(loc)}")
+
+            self.writingData = False
+            self.ledAlert("BLACK")
+            
+            time.sleep(10)
+
     def startLED(self):
 
         self.rabbitThread = Thread(target=self.linkRabbit, daemon=True)
         self.rabbitThread.start()
+
+        self.usbThread = Thread(target=self.usbChecker, daemon=True)
+        self.usbThread.start()
 
 if __name__ == "__main__":
 

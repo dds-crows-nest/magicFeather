@@ -1,4 +1,3 @@
-import gc
 import os # needed for file stuff
 import time # needed for sleep
 import smbus # needed to read I2C

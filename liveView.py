@@ -63,23 +63,25 @@ class LiveView:
 
     def display(self):
 
+        plt.ion() # turn on interactive mode
+
+        x = np.array([i for i in range(len(self.buffer))])
+        y = np.array(self.buffer)
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.autoscale_view()
+        line1, = ax.plot(x, y, 'b-')
+
         while True:
             
-            #plt.close()
-
-            x = np.array([i for i in range(len(self.buffer))])
-            y = np.array(self.buffer)
-
-            #print(str(x))
-            #print(str(y))
-
-            plt.stem(x, y, use_line_collection = True, bottom= 0.0)
+            line1.set_ydata(self.buffer)
             
+            ax.autoscale_view()
+            ax.relim()
 
-            plt.draw()
-            plt.pause(1)
-            time.sleep(1)
-            plt.clf()
+            fig.canvas.draw()
+            fig.canvas.flush_events()
 
 
     def startViewer(self):
