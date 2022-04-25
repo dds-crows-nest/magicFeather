@@ -1,6 +1,6 @@
 # Magic Feather
 
-This is a raspberry pi based sensor package that is designed to detect the presence of infrasonic waves.  
+This is a raspberry pi based sensor package that is designed to detect the presence of infrasonic waves.  The original code this project was based on can be found [here](./old/)
 
 The project is currently only designed to work with a [DLVR-L02D-E1NJ-C-NI3F pressure sensor](https://www.digikey.com/en/products/detail/amphenol-all-sensors-corporation/DLVR-L02D-E1NJ-C-NI3F/4383848?utm_adgroup=Temperature%20Sensors%20-%20NTC%20Thermistors&utm_source=google&utm_medium=cpc&utm_campaign=Shopping_Product_Sensors%2C%20Transducers_NEW&utm_term=&utm_content=Temperature%20Sensors%20-%20NTC%20Thermistors&gclid=EAIaIQobChMIt_iy85mW9gIViInICh3O_weDEAQYAiABEgIctfD_BwE).  However the project is planned to be expanded to include other sensors.
 
